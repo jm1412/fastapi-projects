@@ -3,6 +3,8 @@ import sqlite3
 from pydantic import BaseModel
 from typing import List
 
+from fastapi.middleware.wsgi import WSGIMiddleware
+
 app = FastAPI()
 
 # Database setup
@@ -118,3 +120,6 @@ def add_player_to_tournament(player_tournament: PlayerInTournament):
     """, (player_tournament.player_id, player_tournament.tournament_id, player_tournament.partner_id))
     conn.commit()
     return {"message": "Player added to tournament successfully!"}
+
+
+wsgi_app = WSGIMiddleware(app)
