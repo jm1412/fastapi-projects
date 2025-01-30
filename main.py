@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
-from asgiref.wsgi import WsgiToAsgi
 import sqlite3
 from pydantic import BaseModel
 from typing import List
+from a2wsgi import ASGIMiddleware  # Import the ASGI-to-WSGI middleware
 
 # Create the FastAPI app
 app = FastAPI()
@@ -121,5 +121,5 @@ def add_player_to_tournament(player_tournament: PlayerInTournament):
     conn.commit()
     return {"message": "Player added to tournament successfully!"}
 
-# Wrap the FastAPI app with WSGIMiddleware
-application = WsgiToAsgi(app)
+# Wrap the FastAPI app with ASGIMiddleware
+application = ASGIMiddleware(app)  # Make the app WSGI-compatible
