@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException
 import sqlite3
 from pydantic import BaseModel
 from typing import List
-from mangum import Mangum
 
 app = FastAPI()
 
@@ -119,7 +118,3 @@ def add_player_to_tournament(player_tournament: PlayerInTournament):
     """, (player_tournament.player_id, player_tournament.tournament_id, player_tournament.partner_id))
     conn.commit()
     return {"message": "Player added to tournament successfully!"}
-
-
-
-handler = Mangum(app)
