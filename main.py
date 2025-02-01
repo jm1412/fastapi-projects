@@ -1,17 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from flask import Flask, request, jsonify
 import sqlite3
-from pydantic import BaseModel
-from typing import List
-from a2wsgi import ASGIMiddleware  # Import the ASGI-to-WSGI middleware
 
-# Create the FastAPI app
-app = FastAPI()
+app = Flask(__name__)
 
 # Database setup
 DATABASE = "tournaments.db"
 
 def get_db():
-    conn = sqlite3.connect(DATABASE, check_same_thread=False)
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row  # For dictionary-like access
     return conn
 
@@ -50,76 +46,68 @@ def initialize_db():
 # Initialize the database when the app starts
 initialize_db()
 
-# Pydantic models for request validation
-class TournamentCreate(BaseModel):
-    name: str
-    type: str
-    password: str
+# Routes
+@app.route("/")
+def home():
+    return jsonify({"message": "Welcome to the Badminton Tournament API!"})
 
-class PlayerCreate(BaseModel):
-    name: str
-
-class PlayerInTournament(BaseModel):
-    player_id: int
-    tournament_id: int
-    partner_id: int = None
-
-# Endpoints
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Badminton Tournament API!"}
-
-@app.post("/tournaments", response_model=dict)
-def create_tournament(tournament: TournamentCreate):
+@app.route("/tournaments", methods=["GET", "POST"])
+def tournaments():
     conn = get_db()
     cursor = conn.cursor()
-    try:
+
+    if request.method == "GET":
+        # Get all tournaments
+        cursor.execute("SELECT * FROM Tournaments")
+        tournaments = cursor.fetchall()
+        return jsonify([dict(tournament) for tournament in tournaments])
+
+    elif request.method == "POST":
+        # Create a new tournament
+        data = request.get_json()
+        name = data.get("name")
+        type = data.get("type")
+        password = data.get("password")
+
+        if not name or not type or not password:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        try:
+            cursor.execute("""
+                INSERT INTO Tournaments (name, type, password)
+                VALUES (?, ?, ?)
+            """, (name, type, password))
+            conn.commit()
+            return jsonify({"message": "Tournament created successfully!"}), 201
+        except sqlite3.IntegrityError:
+            return jsonify({"error": "Tournament name already exists"}), 400
+
+@app.route("/players", methods=["GET", "POST"])
+def players():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "GET":
+        # Get all players
+        cursor.execute("SELECT * FROM Players")
+        players = cursor.fetchall()
+        return jsonify([dict(player) for player in players])
+
+    elif request.method == "POST":
+        # Create a new player
+        data = request.get_json()
+        name = data.get("name")
+
+        if not name:
+            return jsonify({"error": "Missing player name"}), 400
+
         cursor.execute("""
-            INSERT INTO Tournaments (name, type, password)
-            VALUES (?, ?, ?)
-        """, (tournament.name, tournament.type, tournament.password))
+            INSERT INTO Players (name)
+            VALUES (?)
+        """, (name,))
         conn.commit()
-        return {"message": "Tournament created successfully!"}
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=400, detail="Tournament name already exists.")
+        return jsonify({"message": "Player created successfully!"}), 201
 
-@app.get("/tournaments", response_model=List[dict])
-def get_tournaments():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Tournaments")
-    tournaments = cursor.fetchall()
-    return [dict(tournament) for tournament in tournaments]
-
-@app.post("/players", response_model=dict)
-def create_player(player: PlayerCreate):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO Players (name)
-        VALUES (?)
-    """, (player.name,))
-    conn.commit()
-    return {"message": "Player created successfully!"}
-
-@app.get("/players", response_model=List[dict])
-def get_players():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Players")
-    players = cursor.fetchall()
-    return [dict(player) for player in players]
-
-@app.post("/players_in_tournaments", response_model=dict)
-def add_player_to_tournament(player_tournament: PlayerInTournament):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO Players_In_Tournaments (player_id, tournament_id, partner_id)
-        VALUES (?, ?, ?)
-    """, (player_tournament.player_id, player_tournament.tournament_id, player_tournament.partner_id))
-    conn.commit()
-    return {"message": "Player added to tournament successfully!"}
-
-# Wrap the FastAPI app with ASGIMiddleware
-application = ASGIMiddleware(app)  # Make the app WSGI-compatible
+# Run the app
+if __name__ == "__main__":
+    app.run(debug=True)
