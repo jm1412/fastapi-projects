@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournaments</title>
+</head>
+<body>
+    <h1>Tournaments</h1>
+    <form method="GET">
+        <input type="text" name="search" placeholder="Search by name" />
+        <button type="submit">Search</button>
+    </form>
+    <ul>
+        {% for tournament in tournaments %}
+        <li>
+            <a href="{{ url_for('get_tournament_details', tournament_id=tournament.tournament_id) }}">
+                {{ tournament.name }} ({{ tournament.type }})
+            </a>
+        </li>
+        {% else %}
+        <li>No tournaments found.</li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('home') }}">Back to Home</a>
+</body>
+</html>

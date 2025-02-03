@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Tournament</title>
+</head>
+<body>
+    <h1>Create New Tournament</h1>
+    <form method="POST">
+        <label for="name">Tournament Name:</label><br>
+        <input type="text" name="name" required><br><br>
+        
+        <label for="type">Tournament Type:</label><br>
+        <select name="type" required>
+            <option value="Singles">Singles</option>
+            <option value="Doubles">Doubles</option>
+        </select><br><br>
+        
+        <label for="categories">Categories:</label><br>
+        <input type="text" name="categories" required><br><br>
+        
+        <label for="date_from">Start Date:</label><br>
+        <input type="date" name="date_from" required><br><br>
+        
+        <label for="date_to">End Date:</label><br>
+        <input type="date" name="date_to" required><br><br>
+        
+        <label for="courts">Number of Courts:</label><br>
+        <input type="number" name="courts" required><br><br>
+        
+        <label for="password">Password:</label><br>
+        <input type="password" name="password" required><br><br>
+        
+        <button type="submit">Create Tournament</button>
+    </form>
+    <a href="{{ url_for('home') }}">Back to Home</a>
+</body>
+</html>

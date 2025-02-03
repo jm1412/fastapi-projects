@@ -82,6 +82,31 @@ def tournaments():
         except sqlite3.IntegrityError:
             return jsonify({"error": "Tournament name already exists"}), 400
 
+@app.route("/tournaments/<int:tournament_id>", methods=["GET"])
+def tournament_details(tournament_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get tournament details
+    cursor.execute("SELECT * FROM Tournaments WHERE tournament_id = ?", (tournament_id,))
+    tournament = cursor.fetchone()
+    if not tournament:
+        return jsonify({"error": "Tournament not found"}), 404
+
+    # Get players in the tournament
+    cursor.execute("""
+        SELECT p.player_id, p.name, pit.partner_id
+        FROM Players p
+        JOIN Players_In_Tournaments pit ON p.player_id = pit.player_id
+        WHERE pit.tournament_id = ?
+    """, (tournament_id,))
+    players = cursor.fetchall()
+
+    return jsonify({
+        "tournament": dict(tournament),
+        "players": [dict(player) for player in players]
+    })
+
 @app.route("/players", methods=["GET", "POST"])
 def players():
     conn = get_db()
@@ -107,6 +132,34 @@ def players():
         """, (name,))
         conn.commit()
         return jsonify({"message": "Player created successfully!"}), 201
+
+@app.route("/tournaments/<int:tournament_id>/add_player", methods=["POST"])
+def add_player_to_tournament(tournament_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    data = request.get_json()
+    player_id = data.get("player_id")
+    partner_id = data.get("partner_id")  # For doubles, optional
+
+    if not player_id:
+        return jsonify({"error": "Missing player ID"}), 400
+
+    # Check if the player is already in the tournament
+    cursor.execute("""
+        SELECT * FROM Players_In_Tournaments
+        WHERE tournament_id = ? AND player_id = ?
+    """, (tournament_id, player_id))
+    if cursor.fetchone():
+        return jsonify({"error": "Player already in tournament"}), 400
+
+    # Add player to tournament
+    cursor.execute("""
+        INSERT INTO Players_In_Tournaments (player_id, tournament_id, partner_id)
+        VALUES (?, ?, ?)
+    """, (player_id, tournament_id, partner_id))
+    conn.commit()
+    return jsonify({"message": "Player added to tournament successfully!"}), 201
 
 # Run the app
 if __name__ == "__main__":
