@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Player</title>
+</head>
+<body>
+    <h1>Create New Player</h1>
+    <form method="POST">
+        <label for="first_name">First Name:</label><br>
+        <input type="text" name="first_name" required><br><br>
+        
+        <label for="last_name">Last Name:</label><br>
+        <input type="text" name="last_name" required><br><br>
+
+        <label for="club">Club:</label><br>
+        <input type="text" name="club" required><br><br>
+        
+        <button type="submit">Create Tournament</button>
+    </form>
+    <a href="{{ url_for('home') }}">Back to Home</a>
+</body>
+</html>
