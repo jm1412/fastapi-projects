@@ -3,25 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tournaments</title>
+    <title>{{ tournament.name }} Details</title>
 </head>
 <body>
-    <h1>Tournaments</h1>
-    <form method="GET">
-        <input type="text" name="search" placeholder="Search by name" />
-        <button type="submit">Search</button>
-    </form>
+    <h1>{{ tournament.name }} - Details</h1>
+    <p><strong>Type:</strong> {{ tournament.type }}</p>
+    <p><strong>Categories:</strong> {{ tournament.categories }}</p>
+    <p><strong>Date:</strong> {{ tournament.date_from }} to {{ tournament.date_to }}</p>
+    <p><strong>Courts:</strong> {{ tournament.courts }}</p>
+    <p><strong>Participants:</strong></p>
     <ul>
-        {% for tournament in tournaments %}
-        <li>
-            <a href="{{ url_for('get_tournament_details', tournament_id=tournament.tournament_id) }}">
-                {{ tournament.name }} ({{ tournament.type }})
-            </a>
-        </li>
+        {% for participant in tournament.participants %}
+        <li>{{ participant }}</li>
         {% else %}
-        <li>No tournaments found.</li>
+        <li>No participants yet.</li>
         {% endfor %}
     </ul>
-    <a href="{{ url_for('home') }}">Back to Home</a>
+    <a href="{{ url_for('get_tournaments') }}">Back to Tournaments</a>
 </body>
 </html>
