@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for # type: ignore
 import sqlite3
 from datetime import datetime
 
@@ -142,28 +142,30 @@ def create_tournament():
 #Create new player
 @app.route('/create_player', methods=['POST'])
 def create_player():
-    data = request.json  # Expecting JSON input
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
-    club = data.get('club', None)  # Default to None if not provided
+    if request.method == 'POST':
+        data = request.json  # Expecting JSON input
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        club = data.get('club', None)  # Default to None if not provided
 
-    if not first_name or not last_name:
-        return jsonify({'error': 'Missing required fields'}), 400
+        if not first_name or not last_name:
+            return jsonify({'error': 'Missing required fields'}), 400
 
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            INSERT INTO Players (first_name, last_name, club)
-            VALUES (?, ?, ?)
-        """, (first_name, last_name, club))
-        conn.commit()
-        conn.close()
-        return jsonify({'message': 'Player created successfully'}), 201
-    except sqlite3.IntegrityError:
-        conn.close()
-        return jsonify({'error': 'Player already exists'}), 400
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO Players (first_name, last_name, club)
+                VALUES (?, ?, ?)
+            """, (first_name, last_name, club))
+            conn.commit()
+            conn.close()
+            return jsonify({'message': 'Player created successfully'}), 201
+        except sqlite3.IntegrityError:
+            conn.close()
+            return jsonify({'error': 'Player already exists'}), 400
 
+    return render_template('create_player.html')
 
 if __name__ == '__main__':
     initialize_db()
