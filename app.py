@@ -180,6 +180,54 @@ def create_player():
 
     return render_template('create_player.html')
 
+
+@app.route('/search_player/<int:tournament_id>', methods=['GET', 'POST'])
+def search_player(tournament_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        search_query = request.form.get('search')
+        if search_query:
+            # Searching by first name or last name
+            cursor.execute("""
+                SELECT player_id, first_name, last_name FROM Players
+                WHERE first_name LIKE ? OR last_name LIKE ?
+            """, (f'%{search_query}%', f'%{search_query}%'))
+            players = cursor.fetchall()
+        else:
+            players = []
+    else:
+        players = []
+
+    conn.close()
+    return render_template('search_player.html', tournament_id=tournament_id, players=players)
+
+@app.route('/add_player_to_tournament/<int:tournament_id>/<int:player_id>', methods=['GET'])
+def add_player_to_tournament(tournament_id, player_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Check if the player is already in the tournament
+    cursor.execute("""
+        SELECT * FROM Players_In_Tournaments
+        WHERE player_id = ? AND tournament_id = ?
+    """, (player_id, tournament_id))
+    existing_entry = cursor.fetchone()
+
+    if existing_entry:
+        conn.close()
+        return jsonify({"error": "Player already in this tournament"}), 400
+
+    cursor.execute("""
+        INSERT INTO Players_In_Tournaments (player_id, tournament_id)
+        VALUES (?, ?)
+    """, (player_id, tournament_id))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('manage_tournament', tournament_id=tournament_id))
+
 if __name__ == '__main__':
     initialize_db()
     app.run(debug=True)
