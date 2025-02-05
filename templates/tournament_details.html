@@ -19,6 +19,17 @@
         <li>No participants yet.</li>
         {% endfor %}
     </ul>
+    
+    <a href="#" onclick="askPassword()">Manage Tournament</a> |
     <a href="{{ url_for('get_tournaments') }}">Back to Tournaments</a>
+
+    <script>
+        function askPassword() {
+            let password = prompt("Enter tournament password:");
+            if (password) {
+                window.location.href = "{{ url_for('manage_tournament', tournament_id=tournament.tournament_id) }}?password=" + encodeURIComponent(password);
+            }
+        }
+    </script>
 </body>
 </html>

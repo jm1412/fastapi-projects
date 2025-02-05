@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for # type: ignore
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 import sqlite3
 from datetime import datetime
 
@@ -6,13 +6,11 @@ app = Flask(__name__)
 
 DATABASE = "tournaments.db"
 
-# Database setup
 def get_db():
     conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # For dictionary-like access
+    conn.row_factory = sqlite3.Row
     return conn
 
-# Initialize the database
 def initialize_db():
     conn = get_db()
     cursor = conn.cursor()
@@ -34,7 +32,9 @@ def initialize_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Players (
             player_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            club TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -43,7 +43,7 @@ def initialize_db():
         CREATE TABLE IF NOT EXISTS Players_In_Tournaments (
             player_id INTEGER NOT NULL,
             tournament_id INTEGER NOT NULL,
-            partner_id INTEGER,  -- For doubles, NULL for singles
+            partner_id INTEGER,
             FOREIGN KEY (player_id) REFERENCES Players (player_id),
             FOREIGN KEY (tournament_id) REFERENCES Tournaments (tournament_id),
             FOREIGN KEY (partner_id) REFERENCES Players (player_id)
@@ -53,12 +53,10 @@ def initialize_db():
     conn.commit()
     conn.close()
 
-# Home Route
 @app.route('/')
 def home():
     return render_template('home.html')
 
-# Fetch all tournaments
 @app.route('/tournaments', methods=['GET'])
 def get_tournaments():
     status = request.args.get('status')
@@ -83,8 +81,7 @@ def get_tournaments():
     conn.close()
     
     return render_template('tournaments.html', tournaments=tournaments)
-  
-# Fetch tournament details
+
 @app.route('/tournaments/<int:tournament_id>', methods=['GET'])
 def get_tournament_details(tournament_id):
     conn = get_db()
@@ -94,7 +91,7 @@ def get_tournament_details(tournament_id):
     
     if tournament:
         cursor.execute("""
-            SELECT Players.name FROM Players
+            SELECT Players.first_name || ' ' || Players.last_name AS name FROM Players
             JOIN Players_In_Tournaments ON Players.player_id = Players_In_Tournaments.player_id
             WHERE Players_In_Tournaments.tournament_id = ?
         """, (tournament_id,))
@@ -107,7 +104,24 @@ def get_tournament_details(tournament_id):
         conn.close()
         return jsonify({"error": "Tournament not found"}), 404
 
-# Create a new tournament
+@app.route('/manage_tournament/<int:tournament_id>', methods=['GET'])
+def manage_tournament(tournament_id):
+    password = request.args.get('password')
+    if not password:
+        return jsonify({"error": "Password required"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Tournaments WHERE tournament_id = ?", (tournament_id,))
+    tournament = cursor.fetchone()
+    
+    if tournament and tournament['password'] == password:
+        conn.close()
+        return render_template('manage_tournament.html', tournament=tournament)
+    else:
+        conn.close()
+        return jsonify({"error": "Incorrect password"}), 403
+
 @app.route('/create_tournament', methods=['GET', 'POST'])
 def create_tournament():
     if request.method == 'POST':
@@ -139,14 +153,13 @@ def create_tournament():
     
     return render_template('create_tournament.html')
 
-#Create new player
-@app.route('/create_player', methods=['POST'])
+@app.route('/create_player', methods=['GET', 'POST'])
 def create_player():
     if request.method == 'POST':
-        data = request.json  # Expecting JSON input
+        data = request.form
         first_name = data.get('first_name')
         last_name = data.get('last_name')
-        club = data.get('club', None)  # Default to None if not provided
+        club = data.get('club', None)
 
         if not first_name or not last_name:
             return jsonify({'error': 'Missing required fields'}), 400
