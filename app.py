@@ -1,10 +1,78 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 import sqlite3
 from datetime import datetime
-
+from flask import session, redirect, url_for, request, jsonify, render_template
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 
+app.secret_key = "your_secret_key"  # Change this to a secure key
+
 DATABASE = "tournaments.db"
+
+def get_db():
+    conn = sqlite3.connect("tournaments.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# ---------------- AUTH ROUTES ----------------
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        hashed_password = generate_password_hash(password)
+
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO Users (username, password) VALUES (?, ?)", (username, hashed_password))
+            conn.commit()
+            return redirect(url_for("login"))
+        except sqlite3.IntegrityError:
+            return jsonify({"error": "Username already exists"}), 400
+        finally:
+            conn.close()
+
+    return render_template("auth.html", action="register")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user["password"], password):
+            session["user_id"] = user["user_id"]
+            session["username"] = user["username"]
+            return redirect(url_for("home"))
+        else:
+            return jsonify({"error": "Invalid credentials"}), 400
+
+    return render_template("auth.html", action="login")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+# ---------------- PROTECT TOURNAMENT ROUTES ----------------
+
+@app.before_request
+def require_login():
+    """ Protect tournament management routes """
+    protected_routes = ["/manage_tournament", "/add_player_to_tournament"]
+    if any(request.path.startswith(route) for route in protected_routes) and "user_id" not in session:
+        return redirect(url_for("login"))
+
+
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -227,6 +295,9 @@ def add_player_to_tournament(tournament_id, player_id):
     conn.close()
 
     return redirect(url_for('manage_tournament', tournament_id=tournament_id))
+
+
+
 
 if __name__ == '__main__':
     initialize_db()
